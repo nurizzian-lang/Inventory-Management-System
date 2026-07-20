@@ -61,7 +61,9 @@
 
           <label>
             Supplier
-            <input id="supplier" required placeholder="e.g. Tech Supplies" />
+            <select id="supplier" required>
+              <option value="">Select supplier</option>
+            </select>
           </label>
 
           <label>
@@ -100,6 +102,61 @@
             </table>
           </div>
         </section>
+      </section>
+
+      <section class="card supplier-card">
+        <div class="supplier-header">
+          <div>
+            <h3>Supplier Management</h3>
+            <p class="hero-text">Create and maintain your vendor list for smoother purchasing.</p>
+          </div>
+        </div>
+
+        <div class="supplier-grid">
+          <form id="supplier-form" class="supplier-form">
+            <h4 id="supplier-form-title">Add Supplier</h4>
+            <input type="hidden" id="supplier-id" />
+
+            <div class="form-grid">
+              <label class="full">
+                Supplier Name
+                <input id="supplier-name" required placeholder="e.g. Tech Supplies" />
+              </label>
+              <label>
+                Contact Person
+                <input id="supplier-contact" placeholder="e.g. Ava" />
+              </label>
+              <label>
+                Email
+                <input id="supplier-email" type="email" placeholder="e.g. ava@company.com" />
+              </label>
+              <label>
+                Phone
+                <input id="supplier-phone" placeholder="e.g. 555-0101" />
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save Supplier</button>
+              <button type="button" id="cancel-supplier-edit" class="secondary-btn hidden">Cancel</button>
+            </div>
+          </form>
+
+          <div class="table-wrapper">
+            <table class="supplier-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="supplier-list"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </div>
 
