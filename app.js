@@ -6,6 +6,12 @@ const initialItems = [
   { id: '3', name: 'Notebook Pack', category: 'Stationery', quantity: 3, price: 4.5, supplier: 'Paper Goods', reorder: 8 }
 ];
 
+const initialSuppliers = [
+  { id: 's1', name: 'Tech Supplies', contact: 'Ava', email: 'ava@techsupplies.com', phone: '555-0101' },
+  { id: 's2', name: 'Workspace Co.', contact: 'Noah', email: 'noah@workspaceco.com', phone: '555-0102' },
+  { id: 's3', name: 'Paper Goods', contact: 'Mina', email: 'mina@papergoods.com', phone: '555-0103' }
+];
+
 const form = document.getElementById('item-form');
 const inventoryList = document.getElementById('inventory-list');
 const searchInput = document.getElementById('search');
@@ -22,22 +28,53 @@ const priceInput = document.getElementById('price');
 const supplierInput = document.getElementById('supplier');
 const reorderInput = document.getElementById('reorder');
 
-let items = loadItems();
+const supplierForm = document.getElementById('supplier-form');
+const supplierList = document.getElementById('supplier-list');
+const supplierIdInput = document.getElementById('supplier-id');
+const supplierNameInput = document.getElementById('supplier-name');
+const supplierContactInput = document.getElementById('supplier-contact');
+const supplierEmailInput = document.getElementById('supplier-email');
+const supplierPhoneInput = document.getElementById('supplier-phone');
+const cancelSupplierEditBtn = document.getElementById('cancel-supplier-edit');
+const supplierFormTitle = document.getElementById('supplier-form-title');
 
-function loadItems() {
+let items = [];
+let suppliers = [];
+
+function loadState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return initialItems;
+    if (!stored) return { items: initialItems, suppliers: initialSuppliers };
+
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) && parsed.length ? parsed : initialItems;
+    if (Array.isArray(parsed)) {
+      return { items: parsed, suppliers: initialSuppliers };
+    }
+
+    return {
+      items: Array.isArray(parsed.items) ? parsed.items : initialItems,
+      suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : initialSuppliers
+    };
   } catch {
-    return initialItems;
+    return { items: initialItems, suppliers: initialSuppliers };
   }
 }
 
-function saveItems() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, suppliers }));
 }
+
+function saveItems() {
+  saveState();
+}
+
+function loadAppState() {
+  const state = loadState();
+  items = state.items;
+  suppliers = state.suppliers;
+}
+
+loadAppState();
 
 function getFilteredItems() {
   const query = searchInput.value.trim().toLowerCase();
@@ -90,6 +127,24 @@ function renderCategories() {
   }
 }
 
+function renderSupplierOptions() {
+  const currentSupplier = supplierInput.value;
+  supplierInput.innerHTML = '<option value="">Select supplier</option>';
+
+  suppliers.forEach((supplier) => {
+    const option = document.createElement('option');
+    option.value = supplier.name;
+    option.textContent = supplier.name;
+    supplierInput.appendChild(option);
+  });
+
+  if (suppliers.some((supplier) => supplier.name === currentSupplier)) {
+    supplierInput.value = currentSupplier;
+  } else if (suppliers.length) {
+    supplierInput.value = suppliers[0].name;
+  }
+}
+
 function renderInventory() {
   const filteredItems = getFilteredItems();
 
@@ -121,10 +176,36 @@ function renderInventory() {
     .join('');
 }
 
+function renderSuppliers() {
+  if (!suppliers.length) {
+    supplierList.innerHTML = '<tr><td colspan="5">No suppliers added yet.</td></tr>';
+    return;
+  }
+
+  supplierList.innerHTML = suppliers
+    .map((supplier) => `
+      <tr>
+        <td>${supplier.name}</td>
+        <td>${supplier.contact || '-'}</td>
+        <td>${supplier.email || '-'}</td>
+        <td>${supplier.phone || '-'}</td>
+        <td>
+          <div class="actions">
+            <button class="action-btn edit" data-supplier-action="edit" data-id="${supplier.id}">Edit</button>
+            <button class="action-btn delete" data-supplier-action="delete" data-id="${supplier.id}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `)
+    .join('');
+}
+
 function render() {
   renderSummary();
   renderCategories();
+  renderSupplierOptions();
   renderInventory();
+  renderSuppliers();
 }
 
 function resetForm() {
@@ -132,6 +213,13 @@ function resetForm() {
   itemIdInput.value = '';
   formTitle.textContent = 'Add Item';
   cancelEditBtn.classList.add('hidden');
+}
+
+function resetSupplierForm() {
+  supplierForm.reset();
+  supplierIdInput.value = '';
+  supplierFormTitle.textContent = 'Add Supplier';
+  cancelSupplierEditBtn.classList.add('hidden');
 }
 
 form.addEventListener('submit', (event) => {
@@ -169,7 +257,7 @@ inventoryList.addEventListener('click', (event) => {
 
   if (action === 'delete') {
     items = items.filter((item) => item.id !== id);
-    saveItems();
+    saveState();
     render();
     return;
   }
@@ -194,11 +282,76 @@ inventoryList.addEventListener('click', (event) => {
 searchInput.addEventListener('input', renderInventory);
 categoryFilter.addEventListener('change', renderInventory);
 cancelEditBtn.addEventListener('click', resetForm);
+
+supplierForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+
+  const payload = {
+    name: supplierNameInput.value.trim(),
+    contact: supplierContactInput.value.trim(),
+    email: supplierEmailInput.value.trim(),
+    phone: supplierPhoneInput.value.trim()
+  };
+
+  if (!payload.name) {
+    return;
+  }
+
+  if (supplierIdInput.value) {
+    const previousName = suppliers.find((supplier) => supplier.id === supplierIdInput.value)?.name;
+    suppliers = suppliers.map((supplier) =>
+      supplier.id === supplierIdInput.value ? { ...supplier, ...payload } : supplier
+    );
+
+    if (previousName && previousName !== payload.name) {
+      items = items.map((item) => (item.supplier === previousName ? { ...item, supplier: payload.name } : item));
+    }
+  } else {
+    suppliers.unshift({ id: crypto.randomUUID(), ...payload });
+  }
+
+  saveState();
+  render();
+  resetSupplierForm();
+});
+
+supplierList.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-supplier-action]');
+  if (!button) return;
+
+  const { action, id } = button.dataset;
+
+  if (action === 'delete') {
+    suppliers = suppliers.filter((supplier) => supplier.id !== id);
+    saveState();
+    render();
+    return;
+  }
+
+  if (action === 'edit') {
+    const supplier = suppliers.find((entry) => entry.id === id);
+    if (!supplier) return;
+
+    supplierIdInput.value = supplier.id;
+    supplierNameInput.value = supplier.name;
+    supplierContactInput.value = supplier.contact || '';
+    supplierEmailInput.value = supplier.email || '';
+    supplierPhoneInput.value = supplier.phone || '';
+    supplierFormTitle.textContent = 'Edit Supplier';
+    cancelSupplierEditBtn.classList.remove('hidden');
+    supplierNameInput.focus();
+  }
+});
+
+cancelSupplierEditBtn.addEventListener('click', resetSupplierForm);
+
 clearDataBtn.addEventListener('click', () => {
   items = initialItems;
-  saveItems();
+  suppliers = initialSuppliers;
+  saveState();
   render();
   resetForm();
+  resetSupplierForm();
 });
 
 render();
